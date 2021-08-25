@@ -1,0 +1,63 @@
+-- JENKINS FILE FREE PROJECT --
+
+docker run --rm -v /usr/lib/backendDocker:/jar backendevelop  				# CREA UN CONTENEDOR CON LA IMAGEN DE DOCKER REFERENCIADA EN UN DOCKERFILE 
+    cd /var/lib/jenkins/workspace/backendespliegue1/backend   				# CAMBIO DE DIRECTORIO
+    git fetch --all					      				# ACTUALIZA LA IMAGEN DEL REPOSITORIO PERO NO HACE CAMBIOS EN LOCAL	
+    git diff develop remotes/origin/develop --name-only       				# COMPARA EL REPOSITORIO EN REMOTO CON NUESTRO REPOSITORIO LOCAL
+    git diff develop remotes/origin/develop --name-only > /var/lib/jenkins/workspace/backendespliegue1/cambios.txt  # INTRODUCE EL GIT DIFF EN EL ARCHIVO TXT
+    git reset --hard origin/develop 			     				# RESETEA LA IMAGEN	
+    git pull http://{USER}:{PASS}@{IP}/{directorio} 					# ACTUALIZA EL REPOSITORIO LOCAL
+    cd /var/lib/jenkins/workspace/backendespliegue1 					# CAMBIO DE DIRECTORIO
+    sh prueba2.sh 									# EJECUCIÓN DEL SCRIPT
+
+
+
+-- SCRIPT QUE SE LANZA DURANTE LA EJECUCIÓN DEL JENKINSFILE --
+    
+#!/bin/bash
+c=$(cat cambios.txt | wc -l) 								# CUENTA LAS LINEAS DEL FICHERO 
+for ((i=1; i <= $c; i++));   								# RECORRE UN BUCLE, TENIENDO COMO FIN LAS LINEAS TOTALES DEL FICHERO
+do
+
+
+        A="$(sed -n "$i"p cambios.txt |tr '/' ' ' | wc -w)"  				# INTRODUCE EN LA VARIABLE A EL NÚMERO DE PALABRAS SEPARAS POR /
+
+
+        if [ "$(sed -n "$i"p cambios.txt | cut -d'/' -f2)" == "nodejs" ]; 		# SEGÚN LA LONGITUD DE UNA LINEA COGE EL CAMPO DEL SERVICIO QUE NECESITAMOS
+        then
+                if [ "$A" = 3 ]; then
+                B="$(sed -n "$i"p cambios.txt | cut -d'/' -f2)"
+                echo $B
+                fi
+        else
+                if [ "$A" = 3 ]; then
+                B="$(sed -n "$i"p cambios.txt | cut -d'/' -f3)"
+                echo $B
+                fi
+        fi
+
+	A=0 										# RESETEA LA VARIABLE A
+
+
+done > servicios.txt # INTRODUCE EL RESULTADO DEL BUCLE EN EL ARCHIVO TXT 
+
+
+cat servicios.txt
+
+
+array=$(cat servicios.txt) 								# INTRODUCE EL TXT EN UN ARRAY
+echo $array # MUESTRA EL CONTENIDO DEL ARRAY
+tr -s [:space:] \\n < servicios.txt | sort | uniq > unicos.txt 				# ELIMINA VALORES REPETIDOS Y MUESTRA SOLO LOS ÚNICOS
+cat unicos.txt 
+declare -a services
+services=$(cat unicos.txt) 								# INTRODUCE EL TXT EN UN ARRAY
+p=$(echo $services) 									# EN LA MISMA LINEA
+env="dev"
+
+
+if [[ -z ${​​​​​​​env}​​​​​​​ || -z ${​​​​​​​services}​​​​​​​ ]]; then
+  echo "expecting 2 parameters, env service, example(dev employee,crm)"
+  exit
+fi
+
+IFS=' ' 										# CAMBIA EL DELIMITADOR
